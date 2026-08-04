@@ -53,9 +53,3 @@ export interface LayerConfig {
   source: LayerSource;
   defaultOn?: boolean;
 }
-
-export interface LayerRuntimeState {
-  status: 'idle' | 'loading' | 'ready' | 'empty' | 'error';
-  message?: string;
-  featureCount?: number;
-}
