@@ -5,6 +5,8 @@
 import L from 'leaflet';
 import type { WmsSourceConfig, LayerRuntimeState } from '../types/layers';
 
+// const geoServerURL = "https://opendata.hcmgis.vn/geoserver/wms";
+
 export function useWmsLayer(map: L.Map, source: WmsSourceConfig) {
   let tileLayer: L.TileLayer.WMS | null = null;
 

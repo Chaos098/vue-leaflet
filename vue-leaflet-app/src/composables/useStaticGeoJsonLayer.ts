@@ -8,14 +8,14 @@ import type { StaticSourceConfig, LayerRuntimeState } from '../types/layers';
 export function useStaticGeoJsonLayer(
   map: L.Map,
   source: StaticSourceConfig,
-  color: string,
+  // color: string,
 ) {
   let geoLayer: L.GeoJSON | null = null;
 
   function add(state: LayerRuntimeState) {
     state.status = 'loading';
     geoLayer = L.geoJSON(source.data, {
-      style: { color, weight: 1.6, fillColor: color, fillOpacity: 0.04 },
+      style: { color: source.color ,weight: 1.6, fillColor: source.color, fillOpacity: 0.04 },
       onEachFeature: (f, layer) => {
         const name = (f.properties as { name?: string } | null)?.name ?? '(không tên)';
         layer.bindPopup(`<b>${name}</b>`);

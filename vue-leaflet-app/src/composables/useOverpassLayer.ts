@@ -43,7 +43,7 @@ function overpassToGeoJSON(data: OverpassResponse): GeoJSON.FeatureCollection {
 export function useOverpassLayer(
   map: L.Map,
   source: OverpassSourceConfig,
-  color: string,
+  // color: string,
 ) {
   let geoLayer: L.GeoJSON | null = null;
   let aborted = false;
@@ -65,8 +65,8 @@ export function useOverpassLayer(
 
       // Set geoJSON for type map 
       geoLayer = L.geoJSON(geojson, {
-        style: { color, weight: 2, fillColor: color, fillOpacity: 0.15 },
-        pointToLayer: (_f, latlng) => L.circleMarker(latlng, { radius: 4, color }),
+        style: { color: source.color, weight: 2, fillColor: source.color, fillOpacity: 0.15 },
+        pointToLayer: (_f, latlng) => L.circleMarker(latlng, { radius: 4 }),
         onEachFeature: (f, layer) => {
           const tags = f.properties ?? {};
           const label = tags.name ?? tags.landuse ?? tags.waterway ?? tags.highway ?? '—';

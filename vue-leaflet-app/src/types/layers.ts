@@ -28,12 +28,14 @@ export interface WfsSourceConfig {
 
 export interface OverpassSourceConfig {
   kind: 'overpass';
+  color: string;
   /** Câu truy vấn Overpass QL, đã bao gồm bbox */
   query: string;
 }
 
 export interface StaticSourceConfig {
   kind: 'static';
+  color: string;
   /** GeoJSON đã import tĩnh */
   data: GeoJSON.FeatureCollection;
 }
@@ -48,8 +50,6 @@ export interface LayerConfig {
   id: string;
   name: string;
   description: string;
-  /** Màu hiển thị cho style + swatch trong UI */
-  color: string;
   source: LayerSource;
   defaultOn?: boolean;
 }

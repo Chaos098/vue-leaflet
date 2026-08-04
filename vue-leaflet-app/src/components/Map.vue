@@ -83,7 +83,7 @@ const statusLabel: Record<string, string> = {
 
       <label v-for="cfg in LAYERS" :key="cfg.id" class="layer-row">
         <input type="checkbox" :checked="cfg.defaultOn" @change="onToggle(cfg.id, $event)" />
-        <span class="swatch" :style="{ background: cfg.color }"></span>
+        <!-- <span class="swatch" :style="{ background: cfg.color }"></span> -->
         <span class="meta">
           <span class="name">{{ cfg.name }}</span>
           <span class="desc">{{ cfg.description }}</span>

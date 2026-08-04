@@ -20,10 +20,10 @@ export function useLayerManager(map: L.Map, layers: LayerConfig[]) {
         handlers.set(cfg.id, useWmsLayer(map, cfg.source));
         break;
       case 'overpass':
-        handlers.set(cfg.id, useOverpassLayer(map, cfg.source, cfg.color));
+        handlers.set(cfg.id, useOverpassLayer(map, cfg.source));
         break;
       case 'static':
-        handlers.set(cfg.id, useStaticGeoJsonLayer(map, cfg.source, cfg.color));
+        handlers.set(cfg.id, useStaticGeoJsonLayer(map, cfg.source));
         break;
       case 'wfs':
         throw new Error(`Layer "${cfg.id}": WFS handler chưa cài — xem ghi chú trong useWfsLayer.ts nếu bạn thêm.`);
