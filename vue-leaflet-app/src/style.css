@@ -1,4 +1,74 @@
-#map {
-    height: 100vh;
-    width: 100%;
+html, body {
+    height: 100%;
+    margin: 0;
 }
+#map {
+    flex: 1;
+}
+
+.app-shell {
+  display: flex;
+  height: 100vh;
+  width: 100%;
+}
+.panel {
+  width: 300px;
+  flex-shrink: 0;
+  padding: 16px;
+  overflow-y: auto;
+  background: #fff;
+  border-right: 1px solid #e2ddd2;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+.panel h1 {
+  font-size: 15px;
+  margin: 0 0 2px;
+}
+.sub {
+  font-size: 11.5px;
+  color: #6b6459;
+  margin: 0 0 14px;
+}
+.section-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #948c7c;
+  margin: 14px 0 4px;
+}
+.layer-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 8px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.layer-row:hover {
+  background: #f2efe6;
+}
+.swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  margin-top: 3px;
+  flex-shrink: 0;
+}
+.meta {
+  display: flex;
+  flex-direction: column;
+  font-size: 13px;
+}
+.desc {
+  font-size: 11px;
+  color: #6b6459;
+}
+.status {
+  font-family: monospace;
+  font-size: 10px;
+  margin-top: 2px;
+}
+.status-ready { color: #0f6e5c; }
+.status-loading { color: #a67c00; }
+.status-error { color: #b3261e; }

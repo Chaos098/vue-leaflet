@@ -1,16 +1,18 @@
 <script setup lang="ts">
 import L from 'leaflet';
 import officeIcon from '../assets/office-building.png'
-import { onBeforeUnmount, onMounted } from 'vue';
+import { onBeforeUnmount, onMounted, ref } from 'vue';
 // import { Map, MapStyle, config } from '@maptiler/sdk';
 import '@maptiler/sdk/dist/maptiler-sdk.css';
 import { geocoding, config } from "@maptiler/client";
+import { useLayerManager } from '../composables/useLayerManager';
 import { LAYERS } from '../config/layers.config';
-import type { LayerConfig } from '../types/layers';
 
 let map: L.Map | null = null;
+let manager: ReturnType<typeof useLayerManager> | null = null;
 const maptilerKey = import.meta.env.VITE_MAPTILER_API_KEY;
 // const gc = new GeocodingControl({ apiKey: maptilerKey });
+const layerState = ref<ReturnType<typeof useLayerManager>['state'] | null>(null);
 
 var marker = L.icon({
   iconUrl: officeIcon,
@@ -22,7 +24,7 @@ var marker = L.icon({
   popupAnchor: [-3, -76] // point from which the popup should open relative to the iconAnchor
 });
 
-const mapTileLayer = L.tileLayer(`https://api.maptiler.com/maps/streets-v4/{z}/{x}/{y}.png?key=${maptilerKey}`, { //style URL
+const terrainTileLayer = L.tileLayer(`https://api.maptiler.com/maps/hybrid-v4/{z}/{x}/{y}.jpg?key=${maptilerKey}`, { //style URL
   tileSize: 512,
   zoomOffset: -1,
   minZoom: 1,
@@ -37,29 +39,20 @@ const openStreetMap = L.tileLayer(
   }
 );
 
-// Dựng L.Layer từ config — chỉ hỗ trợ các nguồn có thể tạo layer đồng bộ
-// (cần thiết để đưa thẳng vào L.control.layers ngay khi khởi tạo map).
-function createOverlayLayer(cfg: LayerConfig): L.Layer {
-  switch (cfg.source.kind) {
-    case 'static':
-      return L.geoJSON(cfg.source.data, {
-        style: { color: cfg.source.color, weight: 1.6, fillColor: cfg.source.color, fillOpacity: 0.04 },
-        onEachFeature: (f, layer) => {
-          const name = (f.properties as { name?: string } | null)?.name ?? '(không tên)';
-          layer.bindPopup(`<b>${name}</b>`);
-        },
-      });
-    case 'wms':
-      return L.tileLayer.wms(cfg.source.baseUrl, {
-        layers: cfg.source.layers,
-        format: cfg.source.format ?? 'image/png',
-        transparent: cfg.source.transparent ?? true,
-        version: '1.1.0',
-      });
-    case 'overpass':
-    case 'wfs':
-      throw new Error(`Layer "${cfg.id}": nguồn "${cfg.source.kind}" chưa được hỗ trợ.`);
-  }
+const baseMaps: Record<string, L.Layer> = {
+  "Street": openStreetMap,
+  "Terrain": terrainTileLayer,
+};
+let activeBaseName = 'Street';
+
+function onBaseChange(name: string) {
+  if (!map || name === activeBaseName) return;
+  const current = baseMaps[activeBaseName];
+  const next = baseMaps[name];
+  if (!current || !next) return;
+  map.removeLayer(current);
+  next.addTo(map);
+  activeBaseName = name;
 }
 
 onMounted(async () => {
@@ -70,32 +63,67 @@ onMounted(async () => {
   const [centerLng, centerLat] = center.features[0].center;
   const [startLng, startLat] = start.features[0].center;
   map = L.map('map').setView([startLat, startLng], 15);
-  mapTileLayer.addTo(map);
-
-  const baseMaps: Record<string, L.Layer> = {
-    "MapTiler Streets": mapTileLayer,
-    "OpenStreetMap": openStreetMap,
-  };
-
-  const overlayMaps: Record<string, L.Layer> = {};
-  for (const cfg of LAYERS) {
-    const layer = createOverlayLayer(cfg);
-    overlayMaps[cfg.name] = layer;
-    if (cfg.defaultOn) layer.addTo(map);
-  }
-
-  L.control.layers(baseMaps, overlayMaps).addTo(map);
+  openStreetMap.addTo(map);
 
   map.flyTo([centerLat, centerLng])
   L.marker([centerLat, centerLng], { icon: marker }).addTo(map).bindPopup("Sở Khoa học Công nghệ");
+
+  manager = useLayerManager(map, LAYERS);
+  layerState.value = manager.state;
+  manager.initDefaults();
 })
 
 onBeforeUnmount(() => {
   map?.remove();
 });
+
+
+function onToggle(id: string, event: Event) {
+  const checked = (event.target as HTMLInputElement).checked;
+  manager?.toggle(id, checked);
+}
+
+const statusLabel: Record<string, string> = {
+  idle: '○ tắt',
+  loading: '● đang tải…',
+  ready: '● sẵn sàng',
+  empty: '● không có dữ liệu',
+  error: '● lỗi',
+};
+
 </script>
 
 
 <template>
-  <div id="map"></div>
+  <div class="app-shell">
+    <aside class="panel">
+      <h1>WebGIS TP.HCM</h1>
+      <p class="sub">5 lớp overlay — Leaflet + Vue 3 + TypeScript</p>
+
+      <div class="section-title">Nền bản đồ</div>
+      <label v-for="name in Object.keys(baseMaps)" :key="name" class="layer-row">
+        <input type="radio" name="baseMap" :value="name" :checked="name === activeBaseName" @change="onBaseChange(name)" />
+        <span class="meta">
+          <span class="name">{{ name }}</span>
+        </span>
+      </label>
+
+      <div class="section-title">Lớp overlay</div>
+      <label v-for="cfg in LAYERS" :key="cfg.id" class="layer-row">
+        <input type="checkbox" :checked="cfg.defaultOn" @change="onToggle(cfg.id, $event)" />
+        <!-- <span class="swatch" :style="{ background: cfg.color }"></span> -->
+        <span class="meta">
+          <span class="name">{{ cfg.name }}</span>
+          <span class="desc">{{ cfg.description }}</span>
+          <span v-if="layerState && layerState[cfg.id]" class="status" :class="`status-${layerState[cfg.id].status}`">
+            {{ statusLabel[layerState[cfg.id].status] }}
+            <template v-if="layerState[cfg.id].featureCount !== undefined">
+              ({{ layerState[cfg.id].featureCount }} đối tượng)
+            </template>
+          </span>
+        </span>
+      </label>
+    </aside>
+    <div id="map"></div>
+  </div>
 </template>
