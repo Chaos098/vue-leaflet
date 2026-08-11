@@ -6,6 +6,7 @@ export const LAYERS: LayerConfig[] = [
     id: "admin",
     name: "Ranh giới hành chính",
     description: "22 quận/huyện TP.HCM",
+    icon: "analytics-outline",
     defaultOn: true,
     source: {
       kind: "static",
@@ -17,6 +18,7 @@ export const LAYERS: LayerConfig[] = [
     id: "roads",
     name: "Giao thông",
     description: "Trục đường chính (motorway/trunk/primary/secondary)",
+    icon: "subway-outline",
     defaultOn: false,
     source: {
       kind: "wms",
@@ -29,6 +31,7 @@ export const LAYERS: LayerConfig[] = [
     id: "water",
     name: "Thủy hệ",
     description: "Sông, kênh, rạch, mặt nước toàn quốc",
+    icon: "boat-outline",
     defaultOn: false,
     source: {
       kind: "wms",
@@ -41,6 +44,7 @@ export const LAYERS: LayerConfig[] = [
     id: "landuse",
     name: "Sử dụng đất",
     description: "Phân rạch hệ thống đất toàn quốc",
+    icon: "globe-outline",
     defaultOn: false,
     source: {
       kind: "wms",
@@ -54,6 +58,7 @@ export const LAYERS: LayerConfig[] = [
     name: "Sân bay",
     description:
       "Danh sách sân bay tại Việt Nam 2018",
+    icon: "airplane-outline",
     defaultOn: false,
     source: {
       kind: "wms",

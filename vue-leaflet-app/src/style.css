@@ -12,9 +12,12 @@ html, body {
   width: 100%;
 }
 .panel {
-  width: 300px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 30px;
   flex-shrink: 0;
-  padding: 16px;
+  padding: 20px;
   overflow-y: auto;
   background: #fff;
   border-right: 1px solid #e2ddd2;
@@ -23,6 +26,10 @@ html, body {
 .panel h1 {
   font-size: 15px;
   margin: 0 0 2px;
+}
+
+.panel ion-icon {
+  font-size: 20px;
 }
 .sub {
   font-size: 11.5px;

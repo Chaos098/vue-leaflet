@@ -50,6 +50,7 @@ export interface LayerConfig {
   id: string;
   name: string;
   description: string;
+  icon: string
   source: LayerSource;
   defaultOn?: boolean;
 }
