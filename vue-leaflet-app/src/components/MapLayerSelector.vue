@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed } from 'vue';
 import streetThumbnail from '../assets/Street.png'
 import terrainThumbnail from '../assets/Terrain.png'
 const props = defineProps<{
