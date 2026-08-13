@@ -6,7 +6,7 @@ export const LAYERS: LayerConfig[] = [
     id: "admin",
     name: "Ranh giới hành chính",
     description: "22 quận/huyện TP.HCM",
-    icon: "analytics-outline",
+    icon: "mingcute:map-line",
     defaultOn: true,
     source: {
       kind: "static",
@@ -16,22 +16,21 @@ export const LAYERS: LayerConfig[] = [
   },
   {
     id: "roads",
-    name: "Giao thông",
-    description: "Trục đường chính (motorway/trunk/primary/secondary)",
-    icon: "subway-outline",
+    name: "Cảng hàng hải",
+    description: "Vị trí của các cảng hàng hải tại Việt Nam",
+    icon: "carbon:harbor",
     defaultOn: false,
     source: {
       kind: "wms",
-      baseUrl:
-        "https://ows.terrestris.de/osm/service",
-      layers: "OSM-WMS",
+      baseUrl: "https://data.opendevelopmentmekong.net/geoserver/ODMekong/harbor/wms",
+      layers: "harbor",
     },
   },
   {
     id: "water",
     name: "Thủy hệ",
     description: "Sông, kênh, rạch, mặt nước toàn quốc",
-    icon: "boat-outline",
+    icon: "ic:sharp-water",
     defaultOn: false,
     source: {
       kind: "wms",
@@ -42,15 +41,21 @@ export const LAYERS: LayerConfig[] = [
   },
   {
     id: "landuse",
-    name: "Sử dụng đất",
-    description: "Phân rạch hệ thống đất toàn quốc",
-    icon: "globe-outline",
+    name: "Ga xe lửa",
+    description: "Vị trí các nhà ga xe lửa trên toàn Việt Nam",
+    icon: "fluent-emoji-high-contrast:station",
     defaultOn: false,
     source: {
       kind: "wms",
+      // baseUrl:
+      //   "https://data.vietnam.opendevelopmentmekong.net/geoserver/ODVietnam/wms",
+      // layers: "ODVietnam:landcover2020",
+      // baseUrl:
+      //   "https://data.opendevelopmentmekong.net/geoserver/ODMekong/station/wmsß",
+      // layers: "station"
       baseUrl:
-        "https://data.vietnam.opendevelopmentmekong.net/geoserver/ODVietnam/wms",
-      layers: "ODVietnam:landcover2020",
+        "https://data.opendevelopmentmekong.net/geoserver/ODMekong/station/wms",
+      layers: "station"
     }, 
   },
   {
@@ -58,13 +63,16 @@ export const LAYERS: LayerConfig[] = [
     name: "Sân bay",
     description:
       "Danh sách sân bay tại Việt Nam 2018",
-    icon: "airplane-outline",
+    icon: "pinhead:airport-terminal-with-plane-takeoff",
     defaultOn: false,
     source: {
       kind: "wms",
       baseUrl:
         "https://data.opendevelopmentmekong.net/geoserver/ODMekong/airport/wms",
       layers: "ODVietnam:airport",
+      // baseUrl:
+      //   "https://geodata-stnmt.tphcm.gov.vn/geoserver/wms",
+      // layers: "dulieunen:cacdoituongduongbokhacc"
     }, 
     // Khi xin được quyền dùng dữ liệu quy hoạch chính thức (theo Nghị định
     // 73/2017/NĐ-CP + QĐ 37/2018/QĐ-UBND, xem hướng dẫn công bố dữ liệu

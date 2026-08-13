@@ -17,6 +17,7 @@ export function useWmsLayer(map: L.Map, source: WmsSourceConfig) {
       format: source.format ?? 'image/png',
       transparent: source.transparent ?? true,
       version: '1.1.0',
+      pane: 'wmsPane',
     });
 
     // WMS không trả về "số feature" như WFS, nên ta chỉ biết layer load được
@@ -29,7 +30,6 @@ export function useWmsLayer(map: L.Map, source: WmsSourceConfig) {
       state.status = 'error';
       state.message = 'Không tải được tile — kiểm tra tên layer hoặc CORS';
     });
-
     tileLayer.addTo(map);
   }
 

@@ -7,6 +7,7 @@ import '@maptiler/sdk/dist/maptiler-sdk.css';
 import { geocoding, config } from "@maptiler/client";
 import { useLayerManager } from '../composables/useLayerManager';
 import { LAYERS } from '../config/layers.config';
+import { Icon } from '@iconify/vue'
 
 
 import type { DrawerPlacement } from 'naive-ui'
@@ -49,12 +50,14 @@ const baseMaps: Record<string, L.Layer> = {
 let activeBaseName = 'Street';
 
 function switchBaseMap(name: string) {
+  
   if (!map || name === activeBaseName) return;
   const current = baseMaps[activeBaseName];
   const next = baseMaps[name];
   if (!current || !next) return;
   map.removeLayer(current);
   next.addTo(map);
+  // next.bringToBack(map) 
   activeBaseName = name;
 }
 
@@ -66,6 +69,9 @@ onMounted(async () => {
   const [centerLng, centerLat] = center.features[0].center;
   const [startLng, startLat] = start.features[0].center;
   map = L.map('map').setView([startLat, startLng], 15);
+  map.createPane('wmsPane')
+  map.getPane('wmsPane')!.style.zIndex = '350';
+// map.getPane('wmsPane').style.pointerEvents = 'none';
   openStreetMap.addTo(map);
 
   map.flyTo([centerLat, centerLng])
@@ -118,23 +124,25 @@ defineExpose({ switchBaseMap });
       <!-- <n-button @click="activate('left')">Left</n-button> -->
       <n-drawer v-model:show="show" :width="300" :placement="placement">
         <n-drawer-content>
-          <h1>WebGIS TP.HCM</h1>
-          <p class="sub">5 lớp overlay — Leaflet + Vue 3 + TypeScript</p>
+          <!-- <h1>WebGIS TP.HCM</h1> -->
+          <!-- <p class="sub">5 lớp overlay — Leaflet + Vue 3 + TypeScript</p> -->
 
-          <div class="section-title">Lớp overlay</div>
+          <!-- <div class="section-title">Lớp overlay</div> -->
           <label v-for="cfg in LAYERS" :key="cfg.id" class="layer-row">
-            <input type="checkbox" :checked="cfg.defaultOn" @change="onToggle(cfg.id, $event)" />
+            <input type="checkbox" :checked="layerState?.[cfg.id]?.status !== 'idle'"
+              @change="onToggle(cfg.id, $event)" />
             <!-- <span class="swatch" :style="{ background: cfg.color }"></span> -->
-             <ion-icon :name="cfg.icon"></ion-icon>
+            <Icon :icon="cfg.icon" width="40" height="40" />
             <span class="meta">
               <span class="name">{{ cfg.name }}</span>
               <span class="desc">{{ cfg.description }}</span>
               <span v-if="layerState && layerState[cfg.id]" class="status"
                 :class="`status-${layerState[cfg.id].status}`">
                 {{ statusLabel[layerState[cfg.id].status] }}
-                <template v-if="layerState[cfg.id].featureCount !== undefined">
+                <!--<template v-if="layerState[cfg.id].featureCount !== undefined">
                   ({{ layerState[cfg.id].featureCount }} đối tượng)
                 </template>
+-->
               </span>
             </span>
           </label>

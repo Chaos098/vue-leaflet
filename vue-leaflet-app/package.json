@@ -10,6 +10,7 @@
     "deploy": "gh-pages -d dist"
   },
   "dependencies": {
+    "@iconify/vue": "^5.0.1",
     "@maptiler/geocoding-control": "^3.0.0",
     "@maptiler/sdk": "^4.0.2",
     "@vue-leaflet/vue-leaflet": "^0.10.1",
