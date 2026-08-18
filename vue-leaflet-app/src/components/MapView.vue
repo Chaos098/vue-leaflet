@@ -16,7 +16,9 @@ let map: L.Map | null = null;
 let manager: ReturnType<typeof useLayerManager> | null = null;
 const maptilerKey = import.meta.env.VITE_MAPTILER_API_KEY;
 // const gc = new GeocodingControl({ apiKey: maptilerKey });
-const layerState = ref<ReturnType<typeof useLayerManager>['state'] | null>(null);
+// const layerState = ref<ReturnType<typeof useLayerManager>['state'] | null>(null);
+
+const overlayMaps: Record<string, L.Layer> = {};
 
 var marker = L.icon({
   iconUrl: officeIcon,
@@ -50,7 +52,7 @@ const baseMaps: Record<string, L.Layer> = {
 let activeBaseName = 'Street';
 
 function switchBaseMap(name: string) {
-  
+
   if (!map || name === activeBaseName) return;
   const current = baseMaps[activeBaseName];
   const next = baseMaps[name];
@@ -71,15 +73,32 @@ onMounted(async () => {
   map = L.map('map').setView([startLat, startLng], 15);
   map.createPane('wmsPane')
   map.getPane('wmsPane')!.style.zIndex = '350';
-// map.getPane('wmsPane').style.pointerEvents = 'none';
+  // map.getPane('wmsPane').style.pointerEvents = 'none';
   openStreetMap.addTo(map);
+
+  //   const overlayMaps: Record<string, L.Layer> = {};
+  // for (const cfg of LAYERS) {
+  //   const layer = createOverlayLayer(cfg);
+  //   overlayMaps[cfg.name] = layer;
+  //   if (cfg.defaultOn) layer.addTo(map);
+  // }
+
 
   map.flyTo([centerLat, centerLng])
   L.marker([centerLat, centerLng], { icon: marker }).addTo(map).bindPopup("Sở Khoa học Công nghệ");
 
   manager = useLayerManager(map, LAYERS);
-  layerState.value = manager.state;
-  manager.initDefaults();
+  for (const cfg of LAYERS) {
+    const layer = manager.createOverLayer(cfg);
+    overlayMaps[cfg.name] = layer;
+    if (cfg.defaultOn) layer.addTo(map);
+  }
+
+  // layerState.value = manager.state;
+  // manager.initDefaults();
+
+  L.control.layers(baseMaps,overlayMaps).addTo(map);
+
 })
 
 onBeforeUnmount(() => {
@@ -87,27 +106,27 @@ onBeforeUnmount(() => {
 });
 
 
-function onToggle(id: string, event: Event) {
-  const checked = (event.target as HTMLInputElement).checked;
-  manager?.toggle(id, checked);
-}
+// function onToggle(id: string, event: Event) {
+//   const checked = (event.target as HTMLInputElement).checked;
+//   manager?.toggle(id, checked);
+// }
 
-const statusLabel: Record<string, string> = {
-  idle: '○ tắt',
-  loading: '● đang tải…',
-  ready: '● sẵn sàng',
-  empty: '● không có dữ liệu',
-  error: '● lỗi',
-};
+// const statusLabel: Record<string, string> = {
+//   idle: '○ tắt',
+//   loading: '● đang tải…',
+//   ready: '● sẵn sàng',
+//   empty: '● không có dữ liệu',
+//   error: '● lỗi',
+// };
 
 
 
-const show = ref(false)
-const placement = ref<DrawerPlacement>('right')
-function activate(place: DrawerPlacement) {
-  show.value = true
-  placement.value = place
-}
+// const show = ref(false)
+// const placement = ref<DrawerPlacement>('right')
+// function activate(place: DrawerPlacement) {
+//   show.value = true
+//   placement.value = place
+// }
 
 defineExpose({ switchBaseMap });
 </script>
@@ -116,39 +135,4 @@ defineExpose({ switchBaseMap });
 
 <template>
 
-
-
-  <div class="app-shell">
-    <aside class="panel">
-      <ion-icon @click="activate('left')" name="menu-outline"></ion-icon>
-      <!-- <n-button @click="activate('left')">Left</n-button> -->
-      <n-drawer v-model:show="show" :width="300" :placement="placement">
-        <n-drawer-content>
-          <!-- <h1>WebGIS TP.HCM</h1> -->
-          <!-- <p class="sub">5 lớp overlay — Leaflet + Vue 3 + TypeScript</p> -->
-
-          <!-- <div class="section-title">Lớp overlay</div> -->
-          <label v-for="cfg in LAYERS" :key="cfg.id" class="layer-row">
-            <input type="checkbox" :checked="layerState?.[cfg.id]?.status !== 'idle'"
-              @change="onToggle(cfg.id, $event)" />
-            <!-- <span class="swatch" :style="{ background: cfg.color }"></span> -->
-            <Icon :icon="cfg.icon" width="40" height="40" />
-            <span class="meta">
-              <span class="name">{{ cfg.name }}</span>
-              <span class="desc">{{ cfg.description }}</span>
-              <span v-if="layerState && layerState[cfg.id]" class="status"
-                :class="`status-${layerState[cfg.id].status}`">
-                {{ statusLabel[layerState[cfg.id].status] }}
-                <!--<template v-if="layerState[cfg.id].featureCount !== undefined">
-                  ({{ layerState[cfg.id].featureCount }} đối tượng)
-                </template>
--->
-              </span>
-            </span>
-          </label>
-        </n-drawer-content>
-      </n-drawer>
-    </aside>
-    <div id="map"></div>
-  </div>
 </template>

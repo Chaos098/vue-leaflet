@@ -9,28 +9,35 @@ export function useStaticGeoJsonLayer(
   map: L.Map,
   source: StaticSourceConfig,
   // color: string,
-) {
+): L.Layer {
   let geoLayer: L.GeoJSON | null = null;
-
-  function add(state: LayerRuntimeState) {
-    state.status = 'loading';
-    geoLayer = L.geoJSON(source.data, {
+  geoLayer = L.geoJSON(source.data, {
       style: { color: source.color ,weight: 1.6, fillColor: source.color, fillOpacity: 0.04 },
       onEachFeature: (f, layer) => {
         const name = (f.properties as { name?: string } | null)?.name ?? '(không tên)';
         layer.bindPopup(`<b>${name}</b>`);
       },
     }).addTo(map);
-    state.status = 'ready';
-    state.featureCount = source.data.features.length;
-  }
 
-  function remove() {
-    if (geoLayer) {
-      map.removeLayer(geoLayer);
-      geoLayer = null;
-    }
-  }
+  // function add(state: LayerRuntimeState) {
+  //   state.status = 'loading';
+  //   geoLayer = L.geoJSON(source.data, {
+  //     style: { color: source.color ,weight: 1.6, fillColor: source.color, fillOpacity: 0.04 },
+  //     onEachFeature: (f, layer) => {
+  //       const name = (f.properties as { name?: string } | null)?.name ?? '(không tên)';
+  //       layer.bindPopup(`<b>${name}</b>`);
+  //     },
+  //   }).addTo(map);
+  //   state.status = 'ready';
+  //   state.featureCount = source.data.features.length;
+  // }
 
-  return { add, remove };
+  // function remove() {
+  //   if (geoLayer) {
+  //     map.removeLayer(geoLayer);
+  //     geoLayer = null;
+  //   }
+  // }
+
+  return geoLayer ;
 }

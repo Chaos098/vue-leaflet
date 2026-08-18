@@ -1,11 +1,11 @@
-import L from 'leaflet';
-import type { OverpassSourceConfig, LayerRuntimeState } from '../types/layers';
+import L from "leaflet";
+import type { OverpassSourceConfig, LayerRuntimeState } from "../types/layers";
 
 //OVERPASS API
-const OVERPASS_URL = 'https://overpass.kumi.systems/api/interpreter';
+const OVERPASS_URL = "https://overpass.kumi.systems/api/interpreter";
 
 interface OverpassElement {
-  type: 'node' | 'way' | 'relation';
+  type: "node" | "way" | "relation";
   tags?: Record<string, string>;
   geometry?: { lat: number; lon: number }[];
 }
@@ -27,17 +27,17 @@ function overpassToGeoJSON(data: OverpassResponse): GeoJSON.FeatureCollection {
       coords[0][1] === coords[coords.length - 1][1];
 
     const geometry: GeoJSON.Geometry = isClosed
-      ? { type: 'Polygon', coordinates: [coords] }
-      : { type: 'LineString', coordinates: coords };
+      ? { type: "Polygon", coordinates: [coords] }
+      : { type: "LineString", coordinates: coords };
 
     features.push({
-      type: 'Feature',
+      type: "Feature",
       properties: el.tags ?? {},
       geometry,
     });
   }
 
-  return { type: 'FeatureCollection', features };
+  return { type: "FeatureCollection", features };
 }
 
 export function useOverpassLayer(
@@ -46,50 +46,84 @@ export function useOverpassLayer(
   // color: string,
 ) {
   let geoLayer: L.GeoJSON | null = null;
-  let aborted = false;
-
-  async function add(state: LayerRuntimeState) {
-    state.status = 'loading';
-    aborted = false;
-    // Fetch data from OVERPASS API
+  async function getOverpassAPI(): Promise<L.GeoJSON | null> {
     try {
       const res = await fetch(OVERPASS_URL, {
-        method: 'POST',
-        body: 'data=' + encodeURIComponent(source.query),
+        method: "POST",
+        body: "data=" + encodeURIComponent(source.query),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json: OverpassResponse = await res.json();
-      if (aborted) return;
 
       const geojson = overpassToGeoJSON(json);
 
       // Set geoJSON for type map
       geoLayer = L.geoJSON(geojson, {
-        style: { color: source.color, weight: 2, fillColor: source.color, fillOpacity: 0.15 },
+        style: {
+          color: source.color,
+          weight: 2,
+          fillColor: source.color,
+          fillOpacity: 0.15,
+        },
         pointToLayer: (_f, latlng) => L.circleMarker(latlng, { radius: 4 }),
         onEachFeature: (f, layer) => {
           const tags = f.properties ?? {};
-          const label = tags.name ?? tags.landuse ?? tags.waterway ?? tags.highway ?? '—';
+          const label =
+            tags.name ?? tags.landuse ?? tags.waterway ?? tags.highway ?? "—";
           layer.bindPopup(`<b>${label}</b>`);
         },
       }).addTo(map);
 
-      state.featureCount = geojson.features.length;
-      state.status = geojson.features.length > 0 ? 'ready' : 'empty';
+      return geoLayer;
     } catch (err) {
-      if (aborted) return;
-      state.status = 'error';
-      state.message = err instanceof Error ? err.message : String(err);
+      console.log("Failed");
+      return null;
     }
   }
 
-  function remove() {
-    aborted = true;
-    if (geoLayer) {
-      map.removeLayer(geoLayer);
-      geoLayer = null;
-    }
-  }
+  // async function add(state: LayerRuntimeState) {
+  //   state.status = 'loading';
+  //   aborted = false;
+  //   // Fetch data from OVERPASS API
+  //   try {
+  //     const res = await fetch(OVERPASS_URL, {
+  //       method: 'POST',
+  //       body: 'data=' + encodeURIComponent(source.query),
+  //     });
+  //     if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  //     const json: OverpassResponse = await res.json();
+  //     if (aborted) return;
 
-  return { add, remove };
+  //     const geojson = overpassToGeoJSON(json);
+
+  //     // Set geoJSON for type map
+  //     geoLayer = L.geoJSON(geojson, {
+  //       style: { color: source.color, weight: 2, fillColor: source.color, fillOpacity: 0.15 },
+  //       pointToLayer: (_f, latlng) => L.circleMarker(latlng, { radius: 4 }),
+  //       onEachFeature: (f, layer) => {
+  //         const tags = f.properties ?? {};
+  //         const label = tags.name ?? tags.landuse ?? tags.waterway ?? tags.highway ?? '—';
+  //         layer.bindPopup(`<b>${label}</b>`);
+  //       },
+  //     }).addTo(map);
+
+  //     state.featureCount = geojson.features.length;
+  //     state.status = geojson.features.length > 0 ? 'ready' : 'empty';
+  //   } catch (err) {
+  //     if (aborted) return;
+  //     state.status = 'error';
+  //     state.message = err instanceof Error ? err.message : String(err);
+  //   }
+  // }
+
+  // function remove() {
+  //   aborted = true;
+  //   if (geoLayer) {
+  //     map.removeLayer(geoLayer);
+  //     geoLayer = null;
+  //   }
+  // }
+
+  // return { add, remove };
+  return { getOverpassAPI };
 }

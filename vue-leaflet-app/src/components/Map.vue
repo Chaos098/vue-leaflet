@@ -1,324 +1,101 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import L from 'leaflet';
+import officeIcon from '../assets/office-building.png'
+import { onBeforeUnmount, onMounted } from 'vue';
+// import { Map, MapStyle, config } from '@maptiler/sdk';
+import '@maptiler/sdk/dist/maptiler-sdk.css';
+import { geocoding, config } from "@maptiler/client";
+import { LAYERS } from '../config/layers.config';
+import type { LayerConfig } from '../types/layers';
 
-interface MapLayer {
-  id: string;
-  name: string;
-  thumbnail: string;
-  type: 'basemap' | 'overlay';
-  defaultOn?: boolean;
-}
+let map: L.Map | null = null;
+const maptilerKey = import.meta.env.VITE_MAPTILER_API_KEY;
+// const gc = new GeocodingControl({ apiKey: maptilerKey });
 
-// Danh sách layer.
-// Sau này bạn có thể chuyển danh sách này sang layers.config.ts
-const layers: MapLayer[] = [
-  {
-    id: 'streets',
-    name: 'Đường phố',
-    thumbnail: '/thumbnails/streets.png',
-    type: 'basemap',
-    defaultOn: true,
-  },
-  {
-    id: 'terrain',
-    name: 'Địa hình',
-    thumbnail: '/thumbnails/terrain.png',
-    type: 'basemap',
-    defaultOn: false,
-  },
-  {
-    id: 'satellite',
-    name: 'Vệ tinh',
-    thumbnail: '/thumbnails/satellite.png',
-    type: 'basemap',
-    defaultOn: false,
-  },
-  {
-    id: 'traffic',
-    name: 'Giao thông',
-    thumbnail: '/thumbnails/traffic.png',
-    type: 'overlay',
-    defaultOn: false,
-  },
-  {
-    id: 'airport',
-    name: 'Sân bay',
-    thumbnail: '/thumbnails/airport.png',
-    type: 'overlay',
-    defaultOn: false,
-  },
-];
+var marker = L.icon({
+  iconUrl: officeIcon,
 
-// Layer đang được chọn
-const activeLayerId = ref(
-  layers.find((layer) => layer.defaultOn)?.id ?? ''
+  iconSize: [25, 40], // size of the icon
+  shadowSize: [50, 64], // size of the shadow
+  iconAnchor: [22, 94], // point of the icon which will correspond to marker's location
+  shadowAnchor: [4, 62],  // the same for the shadow
+  popupAnchor: [-3, -76] // point from which the popup should open relative to the iconAnchor
+});
+
+const mapTileLayer = L.tileLayer(`https://api.maptiler.com/maps/streets-v4/{z}/{x}/{y}.png?key=${maptilerKey}`, { //style URL
+  tileSize: 512,
+  zoomOffset: -1,
+  minZoom: 1,
+  attribution: "<a href=\"https://www.maptiler.com/copyright/\" target=\"_blank\">&copy; MapTiler</a> <a href=\"https://www.openstreetmap.org/copyright\" target=\"_blank\">&copy; OpenStreetMap contributors</a>",
+  crossOrigin: true
+})
+
+const openStreetMap = L.tileLayer(
+  'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+  {
+    attribution: '&copy; OpenStreetMap contributors'
+  }
 );
 
-// Trạng thái mở rộng danh sách layer
-const showMore = ref(false);
-
-// Số layer hiển thị ban đầu
-const visibleLayerCount = 4;
-
-// Các layer được hiển thị trên UI
-const visibleLayers = computed(() => {
-  if (showMore.value) {
-    return layers;
+// Dựng L.Layer từ config — chỉ hỗ trợ các nguồn có thể tạo layer đồng bộ
+// (cần thiết để đưa thẳng vào L.control.layers ngay khi khởi tạo map).
+function createOverlayLayer(cfg: LayerConfig): L.Layer {
+  switch (cfg.source.kind) {
+    case 'static':
+      return L.geoJSON(cfg.source.data, {
+        style: { color: cfg.source.color, weight: 1.6, fillColor: cfg.source.color, fillOpacity: 0.04 },
+        onEachFeature: (f, layer) => {
+          const name = (f.properties as { name?: string } | null)?.name ?? '(không tên)';
+          layer.bindPopup(`<b>${name}</b>`);
+        },
+      });
+    case 'wms':
+      return L.tileLayer.wms(cfg.source.baseUrl, {
+        layers: cfg.source.layers,
+        format: cfg.source.format ?? 'image/png',
+        transparent: cfg.source.transparent ?? true,
+        version: '1.1.0',
+      });
+    case 'overpass':
+    case 'wfs':
+      throw new Error(`Layer "${cfg.id}": nguồn "${cfg.source.kind}" chưa được hỗ trợ.`);
   }
-
-  return layers.slice(0, visibleLayerCount);
-});
-
-// Các layer còn lại
-const hasMoreLayers = computed(() => {
-  return layers.length > visibleLayerCount;
-});
-
-const emit = defineEmits<{
-  (event: 'select', layer: MapLayer): void;
-}>();
-
-/**
- * Chọn một layer
- */
-function selectLayer(layer: MapLayer) {
-  // Nếu là basemap thì chỉ có một basemap active
-  if (layer.type === 'basemap') {
-    activeLayerId.value = layer.id;
-  }
-
-  emit('select', layer);
 }
 
-/**
- * Mở / đóng danh sách layer
- */
-function toggleMore() {
-  showMore.value = !showMore.value;
-}
+onMounted(async () => {
+
+  config.apiKey = maptilerKey
+  const center = await geocoding.forward("273 Điện Biên Phủ, Phường Xuân Hòa, Thành phố Hồ Chí Minh.");
+  const start = await geocoding.forward("Việt Nam")
+  const [centerLng, centerLat] = center.features[0].center;
+  const [startLng, startLat] = start.features[0].center;
+  map = L.map('map').setView([startLat, startLng], 15);
+  mapTileLayer.addTo(map);
+
+  const baseMaps: Record<string, L.Layer> = {
+    "MapTiler Streets": mapTileLayer,
+    "OpenStreetMap": openStreetMap,
+  };
+
+  const overlayMaps: Record<string, L.Layer> = {};
+  for (const cfg of LAYERS) {
+    const layer = createOverlayLayer(cfg);
+    overlayMaps[cfg.name] = layer;
+    if (cfg.defaultOn) layer.addTo(map);
+  }
+
+  L.control.layers(baseMaps, overlayMaps).addTo(map);
+
+  map.flyTo([centerLat, centerLng])
+  L.marker([centerLat, centerLng], { icon: marker }).addTo(map).bindPopup("Sở Khoa học Công nghệ");
+})
+
+onBeforeUnmount(() => {
+  map?.remove();
+});
 </script>
 
+
 <template>
-  <div class="map-layer-selector">
-    <div class="layer-list">
-      <!-- Layer -->
-      <button
-        v-for="layer in visibleLayers"
-        :key="layer.id"
-        class="layer-item"
-        :class="{
-          active: activeLayerId === layer.id,
-        }"
-        type="button"
-        @click="selectLayer(layer)"
-      >
-        <div class="thumbnail-wrapper">
-          <img
-            class="thumbnail"
-            :src="layer.thumbnail"
-            :alt="layer.name"
-          />
-        </div>
-
-        <span class="layer-name">
-          {{ layer.name }}
-        </span>
-      </button>
-
-      <!-- Xem thêm -->
-      <button
-        v-if="hasMoreLayers"
-        class="layer-item more-button"
-        type="button"
-        @click="toggleMore"
-      >
-        <div class="more-icon">
-          <span></span>
-          <span></span>
-          <span></span>
-        </div>
-
-        <span class="layer-name">
-          {{ showMore ? 'Thu gọn' : 'Xem thêm' }}
-        </span>
-      </button>
-    </div>
-  </div>
+  <div id="map"></div>
 </template>
-
-<style scoped>
-.map-layer-selector {
-  position: absolute;
-
-  /*
-   * Đặt selector ở phía dưới bản đồ,
-   * tương tự vị trí layer selector của Google Maps.
-   */
-  bottom: 20px;
-  left: 20px;
-
-  z-index: 1000;
-
-  max-width: calc(100vw - 40px);
-
-  background: #ffffff;
-  border-radius: 16px;
-
-  padding: 8px;
-
-  box-shadow:
-    0 1px 3px rgba(0, 0, 0, 0.12),
-    0 4px 12px rgba(0, 0, 0, 0.12);
-}
-
-.layer-list {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-}
-
-/*
- * Mỗi layer item
- */
-.layer-item {
-  position: relative;
-
-  width: 96px;
-
-  padding: 0;
-
-  border: none;
-  background: transparent;
-
-  cursor: pointer;
-
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-
-  font-family: inherit;
-}
-
-/*
- * Thumbnail
- */
-.thumbnail-wrapper {
-  width: 96px;
-  height: 58px;
-
-  overflow: hidden;
-
-  border-radius: 12px;
-
-  border: 2px solid transparent;
-
-  box-sizing: border-box;
-
-  transition:
-    border-color 0.2s ease,
-    transform 0.2s ease;
-}
-
-.thumbnail {
-  width: 100%;
-  height: 100%;
-
-  object-fit: cover;
-
-  display: block;
-}
-
-/*
- * Tên layer
- */
-.layer-name {
-  margin-top: 5px;
-
-  font-size: 14px;
-  line-height: 18px;
-
-  color: #444;
-
-  text-align: center;
-
-  white-space: nowrap;
-}
-
-/*
- * Layer đang active
- */
-.layer-item.active .thumbnail-wrapper {
-  border-color: #008577;
-}
-
-.layer-item.active .layer-name {
-  color: #008577;
-  font-weight: 500;
-}
-
-/*
- * Hover
- */
-.layer-item:hover .thumbnail-wrapper {
-  transform: translateY(-2px);
-}
-
-/*
- * Nút xem thêm
- */
-.more-icon {
-  width: 96px;
-  height: 58px;
-
-  border-radius: 12px;
-
-  background: #f1f3f4;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-}
-
-.more-icon span {
-  width: 5px;
-  height: 5px;
-
-  border-radius: 50%;
-
-  background: #555;
-}
-
-/*
- * Responsive cho màn hình nhỏ
- */
-@media (max-width: 768px) {
-  .map-layer-selector {
-    left: 10px;
-    bottom: 10px;
-
-    max-width: calc(100vw - 20px);
-
-    overflow-x: auto;
-  }
-
-  .layer-list {
-    gap: 6px;
-  }
-
-  .layer-item,
-  .thumbnail-wrapper,
-  .more-icon {
-    width: 80px;
-  }
-
-  .thumbnail-wrapper,
-  .more-icon {
-    height: 50px;
-  }
-
-  .layer-name {
-    font-size: 12px;
-  }
-}
-</style>
