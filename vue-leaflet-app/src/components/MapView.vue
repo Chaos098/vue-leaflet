@@ -1,24 +1,22 @@
 <script setup lang="ts">
 import L from 'leaflet';
 import officeIcon from '../assets/office-building.png'
-import { onBeforeUnmount, onMounted, ref } from 'vue';
+import { createApp, onBeforeUnmount, onMounted, reactive } from 'vue';
 // import { Map, MapStyle, config } from '@maptiler/sdk';
 import '@maptiler/sdk/dist/maptiler-sdk.css';
 import { geocoding, config } from "@maptiler/client";
 import { useLayerManager } from '../composables/useLayerManager';
 import { LAYERS } from '../config/layers.config';
-import { Icon } from '@iconify/vue'
-
-
-import type { DrawerPlacement } from 'naive-ui'
+import CustomLayerControl from './CustomLayerControl.vue';
 
 let map: L.Map | null = null;
-let manager: ReturnType<typeof useLayerManager> | null = null;
+let controlApp: ReturnType<typeof createApp> | null = null;
 const maptilerKey = import.meta.env.VITE_MAPTILER_API_KEY;
 // const gc = new GeocodingControl({ apiKey: maptilerKey });
-// const layerState = ref<ReturnType<typeof useLayerManager>['state'] | null>(null);
+// object thay vì ref: props của createApp không tự unwrap ref lồng bên trong,
+// nhưng object reactive() thì giữ nguyên reactivity khi đi qua props (giống stateOn)
+const uiState = reactive({ activeBaseName: 'Street' });
 
-const overlayMaps: Record<string, L.Layer> = {};
 
 var marker = L.icon({
   iconUrl: officeIcon,
@@ -45,22 +43,29 @@ const openStreetMap = L.tileLayer(
   }
 );
 
+var openTopoMap = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+  maxZoom: 19,
+  attribution: 'Map data: © OpenStreetMap contributors, SRTM | Map style: © OpenTopoMap (CC-BY-SA)'
+});
+
+
+
 const baseMaps: Record<string, L.Layer> = {
   "Street": openStreetMap,
   "Terrain": terrainTileLayer,
+  "Topo": openTopoMap,
 };
-let activeBaseName = 'Street';
 
 function switchBaseMap(name: string) {
 
-  if (!map || name === activeBaseName) return;
-  const current = baseMaps[activeBaseName];
+  if (!map || name === uiState.activeBaseName) return;
+  const current = baseMaps[uiState.activeBaseName];
   const next = baseMaps[name];
   if (!current || !next) return;
   map.removeLayer(current);
   next.addTo(map);
-  // next.bringToBack(map) 
-  activeBaseName = name;
+  // next.bringToBack(map)
+  uiState.activeBaseName = name;
 }
 
 onMounted(async () => {
@@ -73,32 +78,40 @@ onMounted(async () => {
   map = L.map('map').setView([startLat, startLng], 15);
   map.createPane('wmsPane')
   map.getPane('wmsPane')!.style.zIndex = '350';
-  // map.getPane('wmsPane').style.pointerEvents = 'none';
   openStreetMap.addTo(map);
-
-  //   const overlayMaps: Record<string, L.Layer> = {};
-  // for (const cfg of LAYERS) {
-  //   const layer = createOverlayLayer(cfg);
-  //   overlayMaps[cfg.name] = layer;
-  //   if (cfg.defaultOn) layer.addTo(map);
-  // }
-
 
   map.flyTo([centerLat, centerLng])
   L.marker([centerLat, centerLng], { icon: marker }).addTo(map).bindPopup("Sở Khoa học Công nghệ");
 
-  manager = useLayerManager(map, LAYERS);
-  for (const cfg of LAYERS) {
-    const layer = manager.createOverLayer(cfg);
-    overlayMaps[cfg.name] = layer;
-    if (cfg.defaultOn) layer.addTo(map);
-  }
+  const layerManager = useLayerManager(map, LAYERS);
+  layerManager.initLayer()
 
-  // layerState.value = manager.state;
-  // manager.initDefaults();
+  // Create custom leaflet control panel
+  const PanelControl = L.Control.extend({
+    onAdd() {
+      const container = L.DomUtil.create('div', 'custom-layer-control');
+      L.DomEvent.disableClickPropagation(container);
+      L.DomEvent.disableScrollPropagation(container);
 
-  L.control.layers(baseMaps,overlayMaps).addTo(map);
+      controlApp = createApp(CustomLayerControl, {
+        layers: LAYERS,
+        stateOn: layerManager.stateOn,
+        uiState,
+        selectBase: switchBaseMap,
+        toggleLayer: layerManager.toggleLayer,
+      });
+      controlApp.mount(container);
 
+      return container;
+    },
+
+    onRemove() {
+      controlApp?.unmount();
+      controlApp = null;
+    },
+  });
+
+  new PanelControl({ position: 'topright' }).addTo(map);
 })
 
 onBeforeUnmount(() => {
@@ -106,27 +119,6 @@ onBeforeUnmount(() => {
 });
 
 
-// function onToggle(id: string, event: Event) {
-//   const checked = (event.target as HTMLInputElement).checked;
-//   manager?.toggle(id, checked);
-// }
-
-// const statusLabel: Record<string, string> = {
-//   idle: '○ tắt',
-//   loading: '● đang tải…',
-//   ready: '● sẵn sàng',
-//   empty: '● không có dữ liệu',
-//   error: '● lỗi',
-// };
-
-
-
-// const show = ref(false)
-// const placement = ref<DrawerPlacement>('right')
-// function activate(place: DrawerPlacement) {
-//   show.value = true
-//   placement.value = place
-// }
 
 defineExpose({ switchBaseMap });
 </script>
@@ -134,5 +126,7 @@ defineExpose({ switchBaseMap });
 
 
 <template>
-
+  <div class="app-shell">
+    <div id="map"></div>
+  </div>
 </template>
